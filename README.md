@@ -15,10 +15,11 @@ Documentación técnica de endpoints internos de Skool identificados mediante tr
 1. [Autenticación y headers](#autenticación-y-headers)
 2. [GET /affiliates/v2/compensations](#1-get-affiliatesv2compensations)
 3. [GET /self/groups](#2-get-selfgroups)
-4. [Paginación](#paginación)
-5. [Códigos de respuesta esperados](#códigos-de-respuesta-esperados)
-6. [Ejemplos de consumo](#ejemplos-de-consumo)
-7. [Notas de implementación](#notas-de-implementación)
+4. [GET /affiliates/payout](#3-get-affiliatespayout)
+5. [Paginación](#paginación)
+6. [Códigos de respuesta esperados](#códigos-de-respuesta-esperados)
+7. [Ejemplos de consumo](#ejemplos-de-consumo)
+8. [Notas de implementación](#notas-de-implementación)
 
 ---
 
@@ -34,22 +35,6 @@ Ambos endpoints usan el mismo esquema observado en tus pruebas.
 | `x-aws-waf-token` | Sí | Token de protección AWS WAF |
 | `Origin` | Sí | Debe enviarse como `https://www.skool.com` |
 | `Referer` | Sí | Debe enviarse como `https://www.skool.com/` |
-
-### Ejemplo
-
-```http
-Cookie: auth_token=YOUR_AUTH_TOKEN; aws-waf-token=YOUR_AWS_WAF_TOKEN; client_id=YOUR_CLIENT_ID
-Origin: https://www.skool.com
-Referer: https://www.skool.com/
-x-aws-waf-token: YOUR_AWS_WAF_TOKEN
-```
-
-### Observaciones
-
-- `auth_token` autentica la sesión del usuario.
-- `client_id` parece identificar la sesión o cliente web.
-- `aws-waf-token` y `x-aws-waf-token` ayudan a pasar la capa de protección WAF.
-- Si alguno expira, la petición puede fallar aunque la URL sea correcta.
 
 ---
 
@@ -482,3 +467,118 @@ Para ETL o dashboards se recomienda:
 ## Disclaimer
 
 Esta documentación fue armada con base en ejemplos reales de request/response compartidos manualmente. Al tratarse de endpoints internos, la estructura final puede variar según la cuenta, permisos, flags o cambios del frontend de Skool.
+
+---
+
+# 3. GET `/affiliates/payout`
+
+Obtiene el resumen financiero del afiliado.
+
+## Endpoint
+
+GET https://api2.skool.com/affiliates/payout
+
+## Headers
+
+(Mismos que los otros endpoints)
+
+- Cookie
+- x-aws-waf-token
+- Origin
+- Referer
+
+---
+
+## 🔹 Response
+
+```json
+{
+  "code": "2f268f3f8b8f4f2daa14de64fc6c2449",
+  "currency": "usd",
+  "lifetime": 34120,
+  "last_30_days": 34120,
+  "pending": 29400,
+  "payable": 4720,
+  "setup_status": ""
+}
+```
+
+---
+
+## 🔹 Campos
+
+| Campo | Tipo | Descripción |
+|------|------|------------|
+| code | string | Código de afiliado |
+| currency | string | Moneda |
+| lifetime | number | Ganancia total histórica |
+| last_30_days | number | Ganancias últimos 30 días |
+| pending | number | Monto pendiente |
+| payable | number | Monto disponible para retiro |
+| setup_status | string | Estado de configuración de pagos |
+
+---
+
+## 🔹 Interpretación
+
+- `lifetime` → total generado
+- `last_30_days` → rendimiento reciente
+- `pending` → dinero aún no liberado
+- `payable` → dinero que puedes retirar
+
+---
+
+## 🔹 Ejemplo Python
+
+```python
+import requests
+
+url = "https://api2.skool.com/affiliates/payout"
+
+headers = {
+    "Cookie": "auth_token=TU_TOKEN; aws-waf-token=TU_WAF; client_id=TU_CLIENT_ID",
+    "Origin": "https://www.skool.com",
+    "Referer": "https://www.skool.com/",
+    "x-aws-waf-token": "TU_WAF"
+}
+
+response = requests.get(url, headers=headers)
+data = response.json()
+
+print("Total:", data["lifetime"])
+print("Disponible:", data["payable"])
+```
+
+---
+
+## Ejemplos de consumo
+
+### cURL – payout
+
+```bash
+curl --request GET \
+  --url 'https://api2.skool.com/affiliates/payout' \
+  --header 'Cookie: auth_token=TU_TOKEN; aws-waf-token=TU_WAF_TOKEN; client_id=TU_CLIENT_ID' \
+  --header 'Origin: https://www.skool.com' \
+  --header 'Referer: https://www.skool.com/' \
+  --header 'x-aws-waf-token: TU_WAF_TOKEN'
+```
+
+---
+
+# 🚀 BONUS INSIGHT
+
+Puedes combinar las 3 APIs para un sistema completo:
+
+1. `/self/groups` → identificar grupos  
+2. `/affiliates/v2/compensations` → ver ingresos por usuario  
+3. `/affiliates/payout` → resumen financiero  
+
+👉 Resultado: dashboard completo tipo SaaS afiliados
+
+---
+
+⚠️ Recuerda:
+- Tokens expiran
+- API no oficial
+- Manejar errores y rate limits
