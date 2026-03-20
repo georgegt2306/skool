@@ -1,126 +1,103 @@
-# 📘 Skool API – Affiliates Compensations
+# 📘 Skool API – Affiliates Compensations & Groups
 
 ## 🔹 Descripción
 
-Este endpoint permite obtener las **compensaciones por membresía de afiliados** dentro de un grupo específico en Skool.
-
-> ⚠️ Nota: Esta es una API interna (no oficial), basada en cookies de sesión.
+Documentación de APIs internas de Skool para:
+- Compensaciones de afiliados
+- Listado de grupos del usuario
 
 ---
 
-## 🔹 Endpoint
+# 🔹 1. Affiliates Compensations
 
+## Endpoint
 GET https://api2.skool.com/affiliates/v2/compensations
 
----
+## Query Params
+- offset (int)
+- limit (int)
+- type (membership)
+- group_id (string)
+- cancelled (boolean)
 
-## 🔹 Query Params
-
-| Parámetro     | Tipo    | Requerido | Descripción |
-|--------------|--------|----------|------------|
-| offset       | int    | ✅       | Número de página |
-| limit        | int    | ✅       | Cantidad de registros |
-| type         | string | ✅       | Tipo (membership) |
-| group_id     | string | ✅       | ID del grupo |
-| cancelled    | boolean| ❌       | Filtrar cancelados |
-
-Ejemplo:
-GET /affiliates/v2/compensations?offset=1&limit=30&type=membership&group_id=XXX&cancelled=false
+## Response
+- membership_compensations[]
+- has_more
 
 ---
 
-## 🔹 Headers requeridos
+# 🔹 2. User Groups
 
-| Header            | Descripción |
-|------------------|------------|
-| Cookie           | Contiene auth_token y client_id |
-| x-aws-waf-token  | Token de seguridad AWS |
-| Origin           | https://www.skool.com |
-| Referer          | https://www.skool.com/ |
+## Endpoint
+GET https://api2.skool.com/self/groups
 
----
+## Query Params
 
-## 🔹 Autenticación
+| Parámetro | Tipo | Descripción |
+|----------|------|------------|
+| offset   | int  | Página |
+| limit    | int  | Cantidad |
+| prefs    | bool | Preferencias |
+| members  | bool | Incluir miembros |
 
-- Basada en cookies de sesión
-- Requiere:
-  - auth_token
-  - client_id
-  - aws-waf-token
+### Ejemplo
+
+GET /self/groups?offset=0&limit=100&prefs=false&members=true
 
 ---
 
 ## 🔹 Response
 
-Estructura:
+### Estructura
 
 {
-  "membership_compensations": [...],
-  "has_more": false
+  "groups": [...],
+  "has_more": false,
+  "members": [...]
 }
 
 ---
 
-## 🔹 Campos
+## 🔹 Campos principales
 
-### membership_compensations[]
+### groups[]
 
-- member_id: ID del miembro
-- total: Total generado
-- group_member_role: Rol en el grupo
-- is_membership_free_trial: Está en prueba
-- referral_status: Estado (Active, Cancelling)
-- user_first_name: Nombre
-- user_last_name: Apellido
-- username: Username
-- picture_profile: URL imagen
-- picture_bubble: URL miniatura
-
----
-
-### has_more
-
-- has_more: Indica si hay más páginas
+- id: ID del grupo
+- name: nombre interno
+- metadata:
+  - display_name: nombre visible
+  - description: descripción
+  - total_members: número de miembros
+  - total_posts: publicaciones
+  - plan: tipo de plan
+  - privacy: privacidad
+  - logo_url: logo
+  - cover_small_url: portada
 
 ---
 
-## 🔹 Ejemplo de respuesta
+### members[]
 
-{
-  "membership_compensations": [
-    {
-      "member_id": "abc123",
-      "total": 1180,
-      "referral_status": "Active",
-      "user_first_name": "Elias",
-      "user_last_name": "Kardossli"
-    }
-  ],
-  "has_more": false
-}
+- id: ID del registro
+- user_id: ID usuario
+- group_id: ID grupo
+- role: rol (member, pending, moderator)
+- approved_at: fecha aprobación
 
 ---
 
-## 🔹 Paginación
+## 🔹 Ejemplo de uso en Python
 
-- offset → página
-- limit → cantidad
-- has_more → continuar
-
----
-
-## 🔹 Ejemplo en Python
-
+```python
 import requests
 
-url = "https://api2.skool.com/affiliates/v2/compensations"
+url = "https://api2.skool.com/self/groups"
 
 params = {
-    "offset": 1,
-    "limit": 30,
-    "type": "membership",
-    "group_id": "TU_GROUP_ID",
-    "cancelled": "false"
+    "offset": 0,
+    "limit": 100,
+    "prefs": "false",
+    "members": "true"
 }
 
 headers = {
@@ -133,15 +110,34 @@ headers = {
 response = requests.get(url, params=params, headers=headers)
 data = response.json()
 
-for user in data["membership_compensations"]:
-    print(user["user_first_name"], user["total"])
+for group in data["groups"]:
+    print(group["metadata"]["display_name"], group["metadata"]["total_members"])
+```
+
+---
+
+## 🔹 Headers (ambas APIs)
+
+- Cookie (auth_token, client_id)
+- x-aws-waf-token
+- Origin
+- Referer
 
 ---
 
 ## 🔹 Consideraciones
 
-⚠️ Esta API:
-- No es pública
-- Puede cambiar sin aviso
-- Depende de sesión activa
-- Puede bloquear automatización
+⚠️ APIs internas:
+- No oficiales
+- Pueden cambiar
+- Requieren sesión activa
+- Pueden bloquear automatización
+
+---
+
+## 🚀 Ideas de uso
+
+- Dashboard de afiliados
+- Dashboard de comunidades
+- BI de ingresos y membresías
+- Automatización ETL
